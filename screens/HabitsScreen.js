@@ -13,9 +13,10 @@ import {
   TouchableWithoutFeedback,
   Keyboard
 } from 'react-native';
-import { collection, getDocs, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function HabitsScreen() {
   const [showForm, setShowForm] = useState(false);
@@ -23,14 +24,17 @@ export default function HabitsScreen() {
   const [habits, setHabits] = useState([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState(null);
+  const { currentUser, logout } = useAuth();
 
   useEffect(() => {
     loadHabits();
-  }, []);
+  }, [currentUser]);
 
   const loadHabits = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'habits'));
+      const habitsRef = collection(db, 'habits');
+      const q = query(habitsRef, where('userId', '==', currentUser.uid));
+      const querySnapshot = await getDocs(q);
       const habitsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -48,14 +52,16 @@ export default function HabitsScreen() {
           name: newHabit,
           completed: false,
           createdAt: new Date(),
-          completionDates: []
+          completionDates: [],
+          userId: currentUser.uid
         });
         
         setHabits([...habits, { 
           id: docRef.id, 
           name: newHabit, 
           completed: false,
-          completionDates: [] 
+          completionDates: [],
+          userId: currentUser.uid
         }]);
         setNewHabit('');
         setShowForm(false);
@@ -107,6 +113,14 @@ export default function HabitsScreen() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <KeyboardAvoidingView 
@@ -115,71 +129,77 @@ export default function HabitsScreen() {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View style={styles.innerContainer}>
-            <View style={styles.contentContainer}>
+            <View style={styles.header}>
               <Text style={styles.title}>Manage Habits</Text>
-              
-              <ScrollView style={styles.scrollView}>
-                {habits.length === 0 ? (
-                  <Text style={styles.subtitle}>No habits yet</Text>
-                ) : (
-                  habits.map(habit => (
-                    <View key={habit.id} style={styles.habitItem}>
-                      <Text style={styles.habitText}>{habit.name}</Text>
-                      <TouchableOpacity 
-                        style={styles.deleteButton}
-                        onPress={() => handleDeleteHabit(habit.id, habit.name)}
-                      >
-                        <Ionicons name="trash-outline" size={24} color="#FF3B30" />
-                      </TouchableOpacity>
-                    </View>
-                  ))
-                )}
-              </ScrollView>
+              <TouchableOpacity 
+                style={styles.logoutButton}
+                onPress={handleLogout}
+              >
+                <Ionicons name="log-out-outline" size={24} color="#007AFF" />
+              </TouchableOpacity>
             </View>
-
-            {showForm ? (
-              <View style={styles.formContainer}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter new habit"
-                  value={newHabit}
-                  onChangeText={setNewHabit}
-                  autoFocus={true}
-                />
-                <View style={styles.formButtons}>
-                  <TouchableOpacity 
-                    style={[styles.button, styles.cancelButton]} 
-                    onPress={() => {
-                      setShowForm(false);
-                      Keyboard.dismiss();
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Cancel</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.button, styles.addButton]} 
-                    onPress={() => {
-                      handleAddHabit();
-                      Keyboard.dismiss();
-                    }}
-                  >
-                    <Text style={styles.buttonText}>Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.addButtonContainer}>
-                <TouchableOpacity 
-                  style={[styles.button, styles.addButton]} 
-                  onPress={() => setShowForm(true)}
-                >
-                  <Text style={styles.buttonText}>Add New Habit</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            
+            <ScrollView style={styles.scrollView}>
+              {habits.length === 0 ? (
+                <Text style={styles.subtitle}>No habits yet</Text>
+              ) : (
+                habits.map(habit => (
+                  <View key={habit.id} style={styles.habitItem}>
+                    <Text style={styles.habitText}>{habit.name}</Text>
+                    <TouchableOpacity 
+                      style={styles.deleteButton}
+                      onPress={() => handleDeleteHabit(habit.id, habit.name)}
+                    >
+                      <Ionicons name="trash-outline" size={24} color="#FF3B30" />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
           </View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
+
+      {showForm ? (
+        <View style={styles.formContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter new habit"
+            value={newHabit}
+            onChangeText={setNewHabit}
+            autoFocus={true}
+          />
+          <View style={styles.formButtons}>
+            <TouchableOpacity 
+              style={[styles.button, styles.cancelButton]} 
+              onPress={() => {
+                setShowForm(false);
+                Keyboard.dismiss();
+              }}
+            >
+              <Text style={styles.buttonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.button, styles.addButton]} 
+              onPress={() => {
+                handleAddHabit();
+                Keyboard.dismiss();
+              }}
+            >
+              <Text style={styles.buttonText}>Add</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.addButtonContainer}>
+          <TouchableOpacity 
+            style={[styles.button, styles.addButton]} 
+            onPress={() => setShowForm(true)}
+          >
+            <Text style={styles.buttonText}>Add New Habit</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Modal
         visible={showDeleteConfirm}
@@ -228,62 +248,24 @@ const styles = StyleSheet.create({
   innerContainer: {
     flex: 1,
   },
-  contentContainer: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+  },
+  logoutButton: {
+    padding: 8,
   },
   scrollView: {
     flex: 1,
-  },
-  addButtonContainer: {
     padding: 20,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-  },
-  formContainer: {
-    padding: 20,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  formButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-  },
-  button: {
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    flex: 1,
-  },
-  addButton: {
-    backgroundColor: '#007AFF',
-  },
-  cancelButton: {
-    backgroundColor: '#FF3B30',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
   subtitle: {
     fontSize: 16,
@@ -293,6 +275,7 @@ const styles = StyleSheet.create({
   },
   habitItem: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     padding: 15,
     backgroundColor: '#f8f8f8',
@@ -305,7 +288,49 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     padding: 8,
-    marginLeft: 10,
+  },
+  formContainer: {
+    padding: 20,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 15,
+    fontSize: 16,
+  },
+  formButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  button: {
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  addButton: {
+    backgroundColor: '#007AFF',
+  },
+  cancelButton: {
+    backgroundColor: '#FF3B30',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  addButtonContainer: {
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 30 : 20,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
   },
   modalOverlay: {
     flex: 1,
@@ -315,7 +340,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 20,
     width: '80%',
     maxWidth: 400,
@@ -323,7 +348,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 15,
   },
   modalText: {
     fontSize: 16,
@@ -331,13 +356,12 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 10,
+    justifyContent: 'space-between',
   },
   modalCancelButton: {
-    backgroundColor: '#8E8E93',
+    backgroundColor: '#FF3B30',
   },
   modalDeleteButton: {
-    backgroundColor: '#FF3B30',
+    backgroundColor: '#007AFF',
   },
 }); 

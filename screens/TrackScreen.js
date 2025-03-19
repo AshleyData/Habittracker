@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { collection, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, updateDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useFocusEffect } from '@react-navigation/native';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function TrackScreen() {
   const [habits, setHabits] = useState([]);
+  const { currentUser } = useAuth();
 
   const calculateStreak = (completionDates) => {
     if (!completionDates || completionDates.length === 0) return 0;
@@ -47,7 +49,9 @@ export default function TrackScreen() {
 
   const loadHabits = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, 'habits'));
+      const habitsRef = collection(db, 'habits');
+      const q = query(habitsRef, where('userId', '==', currentUser.uid));
+      const querySnapshot = await getDocs(q);
       const habitsList = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -66,7 +70,9 @@ export default function TrackScreen() {
 
       const loadCurrentHabits = async () => {
         try {
-          const querySnapshot = await getDocs(collection(db, 'habits'));
+          const habitsRef = collection(db, 'habits');
+          const q = query(habitsRef, where('userId', '==', currentUser.uid));
+          const querySnapshot = await getDocs(q);
           if (!isActive) return;
           
           const habitsList = querySnapshot.docs.map(doc => ({
@@ -85,7 +91,7 @@ export default function TrackScreen() {
       return () => {
         isActive = false;
       };
-    }, [])
+    }, [currentUser])
   );
 
   const handleToggleHabit = async (habit) => {

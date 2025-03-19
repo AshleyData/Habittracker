@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 // More detailed logging of environment variables
 console.log('Environment Variables Status:', {
@@ -37,14 +38,16 @@ if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
 }
 
 let db;
+let auth;
 try {
   // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   db = getFirestore(app);
+  auth = getAuth(app);
   console.log('Firebase initialized successfully');
 } catch (error) {
   console.error('Error initializing Firebase:', error);
   throw error;
 }
 
-export { db }; 
+export { db, auth }; 

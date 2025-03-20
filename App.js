@@ -8,8 +8,9 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import TrackScreen from './screens/TrackScreen';
-import HabitsScreen from './screens/HabitsScreen';
+import SettingsScreen from './screens/SettingsScreen';
 import LoginScreen from './screens/LoginScreen';
+import BigAshScreen from './screens/BigAshScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -23,8 +24,10 @@ function TabNavigator() {
 
           if (route.name === 'Track') {
             iconName = focused ? 'checkbox' : 'checkbox-outline';
-          } else if (route.name === 'Habits') {
-            iconName = focused ? 'list' : 'list-outline';
+          } else if (route.name === 'Settings') {
+            iconName = focused ? 'settings' : 'settings-outline';
+          } else if (route.name === 'Coach Ash') {
+            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           }
 
           return <Ionicons name={iconName} size={size} color={color} />;
@@ -34,7 +37,8 @@ function TabNavigator() {
       })}
     >
       <Tab.Screen name="Track" component={TrackScreen} />
-      <Tab.Screen name="Habits" component={HabitsScreen} />
+      <Tab.Screen name="Coach Ash" component={BigAshScreen} />
+      <Tab.Screen name="Settings" component={SettingsScreen} />
     </Tab.Navigator>
   );
 }

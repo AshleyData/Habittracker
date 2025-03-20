@@ -63,6 +63,38 @@ export default function TrackScreen() {
     }
   };
 
+  const resetCompletedHabits = async () => {
+    try {
+      const habitsRef = collection(db, 'habits');
+      const q = query(habitsRef, where('userId', '==', currentUser.uid));
+      const querySnapshot = await getDocs(q);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const updatePromises = querySnapshot.docs.map(async (doc) => {
+        const habit = doc.data();
+        const lastCompletionDate = habit.completionDates?.length > 0 
+          ? new Date(habit.completionDates[habit.completionDates.length - 1].toDate())
+          : null;
+        
+        if (lastCompletionDate) {
+          lastCompletionDate.setHours(0, 0, 0, 0);
+        }
+        
+        // If the last completion date is before today, reset the completed status
+        if (!lastCompletionDate || lastCompletionDate < today) {
+          return updateDoc(doc.ref, { completed: false });
+        }
+      });
+      
+      await Promise.all(updatePromises);
+      loadHabits(); // Reload habits after resetting
+    } catch (error) {
+      console.error('Error resetting completed habits:', error);
+    }
+  };
+
   // Load habits when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
@@ -70,6 +102,7 @@ export default function TrackScreen() {
 
       const loadCurrentHabits = async () => {
         try {
+          await resetCompletedHabits(); // Reset completed habits first
           const habitsRef = collection(db, 'habits');
           const q = query(habitsRef, where('userId', '==', currentUser.uid));
           const querySnapshot = await getDocs(q);
